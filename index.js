@@ -30,6 +30,17 @@ function fmtDuration(sec) {
   return parts.join("");
 }
 
+function displayNameOf(member) {
+  // 優先順: サーバーニックネーム(displayName) → グローバル名(globalName) → ユーザー名(username) → 旧式タグ(tag)
+  return (
+    member?.displayName ||
+    member?.user?.globalName ||
+    member?.user?.username ||
+    member?.user?.tag ||
+    member?.id
+  );
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -52,7 +63,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     // 対象ギルド/チャンネル/ユーザー
     const guildId = (newState.guild || oldState.guild).id;
     const userId = member.id;
-    const username = member.user.tag;
+    const username = displayNameOf(member);
 
     // users upsert（名前の最新化）
     await pg.query(
