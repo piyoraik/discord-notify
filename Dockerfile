@@ -7,5 +7,6 @@ RUN corepack enable
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile --production=true
 
-COPY . .
-CMD ["node", "index.js"]
+COPY src src
+COPY .env.example .env.example
+CMD ["node", "src/index.js"]
