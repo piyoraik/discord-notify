@@ -33,5 +33,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository | toLower }}:${{ steps.get_version.outputs.VERSION }}
-            ghcr.io/${{ github.repository | toLower }}:latest
+            ghcr.io/${{ toLower(github.repository) }}:${{ steps.get_version.outputs.VERSION }}
+            ghcr.io/${{ toLower(github.repository) }}:latest
