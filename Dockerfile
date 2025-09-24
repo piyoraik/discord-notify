@@ -5,7 +5,7 @@ ENV NODE_ENV=production
 RUN corepack enable
 
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile --production=false
 
 COPY src src
 COPY tsconfig.json .
