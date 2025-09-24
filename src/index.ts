@@ -3,8 +3,8 @@ import { config } from "./config.js";
 import { pg } from "./db.js";
 import { onVoiceStateUpdate } from "./handlers/voiceStateUpdate.js";
 
-client.once("ready", async () => {
-  console.log(`Logged in as ${client.user.tag}`);
+client.once("ready", async (c) => {
+  console.log(`Logged in as ${c.user.tag}`);
   try {
     await pg.connect();
     console.log("Connected to PostgreSQL");

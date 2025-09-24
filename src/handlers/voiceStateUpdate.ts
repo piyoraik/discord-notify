@@ -1,8 +1,21 @@
+import { VoiceState } from "discord.js";
 import { pg } from "../db.js";
 import { displayNameOf, fmtDuration, fmtJst, nowUtc } from "../utils.js";
 import { notify } from "../client.js";
 
-async function handleJoin(guildId, userId, newCh, username) {
+/**
+ * ユーザーのボイスチャンネル参加を処理する
+ * @param guildId サーバーID
+ * @param userId ユーザーID
+ * @param newCh 参加したチャンネルID
+ * @param username ユーザー名
+ */
+async function handleJoin(
+  guildId: string,
+  userId: string,
+  newCh: string,
+  username: string
+) {
   const now = nowUtc();
   await pg.query(
     `INSERT INTO voice_sessions (guild_id, user_id, channel_id, started_at)
@@ -12,10 +25,22 @@ async function handleJoin(guildId, userId, newCh, username) {
   await notify(`${username} が <#${newCh}> に参加しました (${fmtJst(now)})`);
 }
 
-async function handleLeave(guildId, userId, oldCh, username) {
+/**
+ * ユーザーのボイスチャンネル退室を処理する
+ * @param guildId サーバーID
+ * @param userId ユーザーID
+ * @param oldCh 退室したチャンネルID
+ * @param username ユーザー名
+ */
+async function handleLeave(
+  guildId: string,
+  userId: string,
+  oldCh: string,
+  username: string
+) {
   const now = nowUtc();
   // 未終了セッションを終了
-  const { rows } = await pg.query(
+  const { rows } = await pg.query<{ id: number; started_at: string }>(
     `SELECT id, started_at FROM voice_sessions
      WHERE guild_id=$1 AND user_id=$2 AND ended_at IS NULL
      ORDER BY started_at DESC LIMIT 1`,
@@ -49,7 +74,21 @@ async function handleLeave(guildId, userId, oldCh, username) {
   }
 }
 
-async function handleMove(guildId, userId, oldCh, newCh, username) {
+/**
+ * ユーザーのボイスチャンネル移動を処理する
+ * @param guildId サーバーID
+ * @param userId ユーザーID
+ * @param oldCh 移動元のチャンネルID
+ * @param newCh 移動先のチャンネルID
+ * @param username ユーザー名
+ */
+async function handleMove(
+  guildId: string,
+  userId: string,
+  oldCh: string,
+  newCh: string,
+  username: string
+) {
   // 連続セッションとして扱う：終了せず channel_id だけ更新する
   await pg.query(
     `UPDATE voice_sessions
@@ -60,7 +99,16 @@ async function handleMove(guildId, userId, oldCh, newCh, username) {
   await notify(`${username} が <#${oldCh}> → <#${newCh}> に移動`);
 }
 
-export async function onVoiceStateUpdate(oldState, newState) {
+/**
+ * voiceStateUpdateイベントのメインハンドラ
+ * ユーザーのVC参加/退室/移動を検知してそれぞれの処理を呼び出す
+ * @param oldState 変更前のVoiceState
+ * @param newState 変更後のVoiceState
+ */
+export async function onVoiceStateUpdate(
+  oldState: VoiceState,
+  newState: VoiceState
+) {
   try {
     const member = newState.member || oldState.member;
     if (!member) return;
