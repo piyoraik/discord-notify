@@ -4,6 +4,8 @@ export const config = {
   discord: {
     token: process.env.DISCORD_TOKEN,
     notifyChannelId: process.env.NOTIFY_CHANNEL_ID,
+    clientId: process.env.CLIENT_ID,
+    guildId: process.env.GUILD_ID,
   },
   db: {
     host: process.env.PGHOST,
