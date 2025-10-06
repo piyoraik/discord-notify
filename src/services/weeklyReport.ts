@@ -71,7 +71,7 @@ export function buildWeeklyReportEmbed(
   const start = new Date(period.start_utc);
   const end = new Date(period.end_utc);
   const embed = new EmbedBuilder().setTitle(
-    `先週のボイスチャット滞在ランキング (${fmtJst(start)} 〜 ${fmtJst(end)})`
+    `先週のボイスチャット滞在時間 (${fmtJst(start)} 〜 ${fmtJst(end)})`
   );
 
   if (!stats.length) {
@@ -80,7 +80,6 @@ export function buildWeeklyReportEmbed(
   }
 
   const limited = stats.slice(0, WEEKLY_TOP_LIMIT);
-  const rankingLines: string[] = [];
   const nameLines: string[] = [];
   const channelLines: string[] = [];
   const durationLines: string[] = [];
@@ -88,21 +87,18 @@ export function buildWeeklyReportEmbed(
   for (let i = 0; i < limited.length; i++) {
     const row = limited[i];
     const rank = i + 1;
-    rankingLines.push(String(rank));
-    nameLines.push(row.username);
+    nameLines.push(`${rank}. ${row.username}`);
     channelLines.push(row.main_channel_id ? `<#${row.main_channel_id}>` : "-");
     durationLines.push(fmtDuration(parseInt(row.total_seconds, 10)) || "0秒");
   }
 
   if (stats.length > WEEKLY_TOP_LIMIT) {
-    rankingLines.push("…");
     nameLines.push(`他 ${stats.length - WEEKLY_TOP_LIMIT} 名`);
     channelLines.push("-");
     durationLines.push("-");
   }
 
   embed.addFields(
-    { name: "ランキング", value: rankingLines.join("\n") || "-", inline: true },
     { name: "名前", value: nameLines.join("\n") || "-", inline: true },
     { name: "チャンネル", value: channelLines.join("\n") || "-", inline: true },
     { name: "滞在時間", value: durationLines.join("\n") || "-", inline: true }
