@@ -76,38 +76,31 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       continue;
     }
 
-    let cursor = startedUtc.getTime() + JST_OFFSET_MS;
+    const startMs = startedUtc.getTime() + JST_OFFSET_MS;
     const endMs = endedUtc.getTime() + JST_OFFSET_MS;
 
-    if (endMs <= cursor) {
+    if (endMs <= startMs) {
       continue;
     }
 
-    while (cursor < endMs) {
-      const dayStart = Math.floor(cursor / DAY_MS) * DAY_MS;
-      const dayEnd = dayStart + DAY_MS;
-      const chunkEnd = Math.min(endMs, dayEnd);
-      const chunkSeconds = (chunkEnd - cursor) / 1000;
+    const dayStart = Math.floor(startMs / DAY_MS) * DAY_MS;
 
-      let existing = dayData.get(dayStart);
-      if (!existing) {
-        existing = {
-          totalSeconds: 0,
-          startMs: Number.POSITIVE_INFINITY,
-          endMs: 0,
-          channels: new Set<string>(),
-        };
-        dayData.set(dayStart, existing);
-      }
+    let existing = dayData.get(dayStart);
+    if (!existing) {
+      existing = {
+        totalSeconds: 0,
+        startMs: Number.POSITIVE_INFINITY,
+        endMs: 0,
+        channels: new Set<string>(),
+      };
+      dayData.set(dayStart, existing);
+    }
 
-      existing.totalSeconds += chunkSeconds;
-      existing.startMs = Math.min(existing.startMs, cursor);
-      existing.endMs = Math.max(existing.endMs, chunkEnd);
-      if (row.channel_id) {
-        existing.channels.add(row.channel_id);
-      }
-
-      cursor = chunkEnd;
+    existing.totalSeconds += (endMs - startMs) / 1000;
+    existing.startMs = Math.min(existing.startMs, startMs);
+    existing.endMs = Math.max(existing.endMs, endMs);
+    if (row.channel_id) {
+      existing.channels.add(row.channel_id);
     }
   }
 
@@ -126,8 +119,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const durationLines: string[] = [];
   const channelLines: string[] = [];
 
-  for (const [dayStart, info] of limitedDays) {
-    timeLines.push(formatDayRange(dayStart, info.startMs, info.endMs));
+  for (const [, info] of limitedDays) {
+    timeLines.push(formatDayRange(info.startMs, info.endMs));
     durationLines.push(fmtDuration(Math.round(info.totalSeconds)) || "0分");
     channelLines.push(formatChannels(info.channels));
   }
@@ -158,20 +151,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   });
 }
 
-function formatDayRange(
-  dayStartJst: number,
-  startMsJst: number,
-  endMsJst: number
-): string {
-  const clampedStart = Math.max(startMsJst, dayStartJst);
-  const dayEndJst = dayStartJst + DAY_MS;
-  let clampedEnd = Math.min(endMsJst, dayEndJst);
-
-  if (clampedEnd === dayEndJst && clampedEnd - clampedStart >= 60 * 1000) {
-    clampedEnd -= 60 * 1000;
-  }
-
-  return `${formatWithWeekday(clampedStart)} - ${formatWithWeekday(clampedEnd)}`;
+function formatDayRange(startMsJst: number, endMsJst: number): string {
+  return `${formatWithWeekday(startMsJst)} - ${formatWithWeekday(endMsJst)}`;
 }
 
 function formatWithWeekday(msJst: number): string {
