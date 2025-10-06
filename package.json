@@ -10,7 +10,9 @@
     "deploy": "tsx src/deploy-commands.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "release": "standard-version --no-verify",
-    "prepare": "husky"
+    "prepare": "husky",
+    "weekly-report": "node dist/jobs/weeklyReport.js",
+    "weekly-report:dev": "tsx src/jobs/weeklyReport.ts"
   },
   "dependencies": {
     "discord.js": "^14.22.1",

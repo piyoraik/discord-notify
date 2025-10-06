@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: discord-weekly-report
+  namespace: discord-bot
+spec:
+  schedule: "0 17 * * 2"
+  timeZone: Asia/Tokyo
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: weekly-report
+              image: ghcr.io/piyoraik/discord-notify:latest
+              imagePullPolicy: Always
+              command: ["yarn", "weekly-report"]
+              envFrom:
+                - secretRef: { name: discord-secret }
+                - secretRef: { name: discord-config }
+                - secretRef: { name: bot-db }
+          imagePullSecrets:
+            - name: ghcr-pull

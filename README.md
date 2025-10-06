@@ -8,6 +8,7 @@ Discord サーバーのボイスチャンネル出入りを検知し、指定し
 - 通知チャンネルへのメッセージ送信
 - PostgreSQL へのセッション履歴保存
 - `/pttime` コマンドによる通話時間の確認
+- 週次の通話滞在ランキングを自動投稿 (Kubernetes CronJob 対応)
 
 ## 必要要件
 - Node.js 20 以上（推奨: Node 22）
@@ -72,6 +73,18 @@ Discord サーバーのボイスチャンネル出入りを検知し、指定し
   yarn start
   ```
 
+## 週次レポート
+Bot の利用履歴をもとに先週 1 週間の通話時間ランキングを投稿するスクリプトを追加しました。
+
+### ローカル実行
+```bash
+yarn build
+yarn weekly-report
+```
+
+### Kubernetes CronJob 例
+`k8s/cronjob-weekly-report.yaml` を参照してください。クラスターの namespace やイメージ名、Secret 名称は環境に合わせて調整します。
+
 ## Docker で動かす
 ```bash
 docker build -t discord-notify-bot .
@@ -92,6 +105,7 @@ src/
   client.ts            // Discord クライアントと通知処理
   commands/            // スラッシュコマンド定義
   handlers/            // イベントハンドラ
+  jobs/                // 定期バッチスクリプト
   utils.ts             // 日付フォーマット等のヘルパー
   deploy-commands.ts   // コマンド配備スクリプト
 ```
