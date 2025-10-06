@@ -82,6 +82,18 @@ yarn build
 yarn weekly-report
 ```
 
+### スラッシュコマンドでテスト
+`/weeklyreport` コマンドを実行すると、history コマンドと同様の列構成で週次ランキングをエフェメラル表示できます。新しいコマンドを利用する際は `yarn deploy` で再配備してください。
+
+### テスト用のDM出力
+ジョブを本番チャンネルに投稿せず確認したいときは、以下の環境変数を設定してから `yarn weekly-report:dev` を実行すると Bot から DM を受け取れます。
+
+```bash
+export WEEKLY_REPORT_NOTIFY_MODE=ephemeral
+export WEEKLY_REPORT_TEST_USER_ID=<確認したい Discord ユーザー ID>
+yarn weekly-report:dev
+```
+
 ### Kubernetes CronJob 例
 `k8s/cronjob-weekly-report.yaml` を参照してください。クラスターの namespace やイメージ名、Secret 名称は環境に合わせて調整します。
 
@@ -96,8 +108,9 @@ docker run --rm \
 ## 利用可能なスラッシュコマンド
 | コマンド | 説明 |
 | --- | --- |
+| `/history` | ボイスチャット滞在履歴を表示します |
 | `/pttime` | サーバー内の累計通話時間を返します (本人のみが閲覧可能) |
-| `/test` | 動作確認用メッセージを返します |
+| `/weeklyreport` | 先週の通話滞在ランキングをエフェメラル表示します (テスト用) |
 
 ## ディレクトリ構成
 ```
@@ -106,6 +119,7 @@ src/
   commands/            // スラッシュコマンド定義
   handlers/            // イベントハンドラ
   jobs/                // 定期バッチスクリプト
+  services/            // 集計やレポート用の共通ロジック
   utils.ts             // 日付フォーマット等のヘルパー
   deploy-commands.ts   // コマンド配備スクリプト
 ```

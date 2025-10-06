@@ -1,4 +1,9 @@
-import { Client, GatewayIntentBits, TextChannel } from "discord.js";
+import {
+  Client,
+  GatewayIntentBits,
+  MessageCreateOptions,
+  TextChannel,
+} from "discord.js";
 import { config } from "./config.js";
 
 /**
@@ -12,17 +17,18 @@ export const client = new Client({
 });
 
 /**
- * 指定されたチャンネルに通知メッセージを送信する
- * @param {string} message - 送信するメッセージ
+ * 指定されたチャンネルに通知メッセージを送信する。
+ * 文字列でも `MessageCreateOptions` でも送信可能。
  */
-export async function notify(message: string): Promise<void> {
+export async function notify(message: string | MessageCreateOptions): Promise<void> {
   const channelId = config.discord.notifyChannelId;
   if (!channelId) return;
 
   try {
     const ch = await client.channels.fetch(channelId);
     if (ch instanceof TextChannel) {
-      await ch.send(message);
+      const payload = typeof message === "string" ? { content: message } : message;
+      await ch.send(payload);
     }
   } catch (error) {
     console.error("Failed to send notification:", error);

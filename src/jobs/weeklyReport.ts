@@ -1,80 +1,7 @@
 import { client, notify } from "../client.js";
 import { config } from "../config.js";
 import { pg } from "../db.js";
-import { fmtDuration, fmtJst } from "../utils.js";
-
-interface WeeklyStatsRow {
-  user_id: string;
-  username: string;
-  total_seconds: string;
-}
-
-interface PeriodRow {
-  start_utc: string;
-  end_utc: string;
-}
-
-const TOP_LIMIT = 10;
-
-async function fetchPeriod(): Promise<PeriodRow> {
-  const { rows } = await pg.query<PeriodRow>(
-    `SELECT
-        (date_trunc('week', now() AT TIME ZONE 'Asia/Tokyo') - interval '1 week') AT TIME ZONE 'Asia/Tokyo' AS start_utc,
-        (date_trunc('week', now() AT TIME ZONE 'Asia/Tokyo')) AT TIME ZONE 'Asia/Tokyo' AS end_utc`
-  );
-
-  if (!rows.length) {
-    throw new Error("Failed to calculate weekly period");
-  }
-  return rows[0];
-}
-
-async function fetchWeeklyStats(guildId: string, period: PeriodRow) {
-  const { rows } = await pg.query<WeeklyStatsRow>(
-    `SELECT vs.user_id, u.username, SUM(vs.duration_seconds)::bigint AS total_seconds
-       FROM voice_sessions vs
-       JOIN users u ON u.user_id = vs.user_id
-      WHERE vs.guild_id = $1
-        AND vs.duration_seconds IS NOT NULL
-        AND vs.ended_at >= $2
-        AND vs.ended_at < $3
-      GROUP BY vs.user_id, u.username
-      ORDER BY total_seconds DESC`,
-    [guildId, period.start_utc, period.end_utc]
-  );
-
-  return rows;
-}
-
-function buildReportMessage(
-  stats: WeeklyStatsRow[],
-  period: PeriodRow
-): string {
-  const start = new Date(period.start_utc);
-  const end = new Date(period.end_utc);
-  const header = `先週のボイスチャット滞在ランキング (${fmtJst(start)} 〜 ${fmtJst(end)})`;
-
-  if (stats.length === 0) {
-    return `${header}\n対象期間の通話記録はありませんでした。`;
-  }
-
-  const lines = stats.slice(0, TOP_LIMIT).map((row, index) => {
-    const duration = fmtDuration(parseInt(row.total_seconds, 10));
-    return `${index + 1}. ${row.username}: ${duration}`;
-  });
-
-  if (stats.length > TOP_LIMIT) {
-    lines.push(`…他 ${stats.length - TOP_LIMIT} 名`);
-  }
-
-  const totalSeconds = stats.reduce(
-    (sum, row) => sum + parseInt(row.total_seconds, 10),
-    0
-  );
-  lines.push(`合計通話時間: ${fmtDuration(totalSeconds)}`);
-
-  return `${header}\n${lines.join("\n")}`;
-}
+import { collectWeeklyReport } from "../services/weeklyReport.js";
 
 async function ensureDiscordReady(token: string): Promise<void> {
   await client.login(token);
@@ -114,13 +41,26 @@ async function main() {
   await pg.connect();
 
   try {
-    const period = await fetchPeriod();
-    const stats = await fetchWeeklyStats(guildId, period);
+    const { embed } = await collectWeeklyReport(guildId);
 
     await ensureDiscordReady(token);
 
-    const message = buildReportMessage(stats, period);
-    await notify(message);
+    const mode = process.env.WEEKLY_REPORT_NOTIFY_MODE || "channel";
+    const testUserId = process.env.WEEKLY_REPORT_TEST_USER_ID;
+
+    if (mode === "ephemeral") {
+      if (!testUserId) {
+        console.warn(
+          "WEEKLY_REPORT_NOTIFY_MODE=ephemeral ですが WEEKLY_REPORT_TEST_USER_ID が未設定のためチャンネル送信にフォールバックします"
+        );
+      } else {
+        const user = await client.users.fetch(testUserId);
+        await user.send({ embeds: [embed] });
+        return;
+      }
+    }
+
+    await notify({ embeds: [embed] });
   } finally {
     await pg.end().catch(() => undefined);
     client.destroy();
