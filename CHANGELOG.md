@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.3.2](https://github.com/piyoraik/discord-notify/compare/v1.3.1...v1.3.2) (2025-10-06)
+
+
+### Bug Fixes
+
+* 週次レポートの表示形式の修正 ([1125fca](https://github.com/piyoraik/discord-notify/commit/1125fca5c040b06abe598b590858d25cd8d86025))
+
 ### [1.3.1](https://github.com/piyoraik/discord-notify/compare/v1.3.0...v1.3.1) (2025-10-06)
 
 
