@@ -1,5 +1,6 @@
 import {
   ChatInputCommandInteraction,
+  EmbedBuilder,
   SlashCommandBuilder,
 } from "discord.js";
 import { pg } from "../db.js";
@@ -49,7 +50,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const dayTotals = new Map<number, number>();
+  const dayData = new Map<
+    number,
+    { totalSeconds: number; startMs: number; endMs: number }
+  >();
 
   for (const row of rows) {
     const startedUtc = new Date(row.started_at);
@@ -68,14 +72,24 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     while (cursor < endMs) {
       const dayStart = Math.floor(cursor / DAY_MS) * DAY_MS;
       const dayEnd = dayStart + DAY_MS;
-      const chunk = Math.min(endMs, dayEnd) - cursor;
-      const previous = dayTotals.get(dayStart) ?? 0;
-      dayTotals.set(dayStart, previous + chunk / 1000);
-      cursor = Math.min(endMs, dayEnd);
+      const chunkEnd = Math.min(endMs, dayEnd);
+      const chunkSeconds = (chunkEnd - cursor) / 1000;
+      const existing = dayData.get(dayStart) ?? {
+        totalSeconds: 0,
+        startMs: Number.POSITIVE_INFINITY,
+        endMs: 0,
+      };
+
+      existing.totalSeconds += chunkSeconds;
+      existing.startMs = Math.min(existing.startMs, cursor);
+      existing.endMs = Math.max(existing.endMs, chunkEnd);
+      dayData.set(dayStart, existing);
+
+      cursor = chunkEnd;
     }
   }
 
-  if (!dayTotals.size) {
+  if (!dayData.size) {
     await interaction.reply({
       content: "滞在時間の集計結果がありません。",
       ephemeral: true,
@@ -83,40 +97,40 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const sortedDays = Array.from(dayTotals.entries()).sort((a, b) => b[0] - a[0]);
+  const sortedDays = Array.from(dayData.entries()).sort((a, b) => b[0] - a[0]);
   const limitedDays = sortedDays.slice(0, MAX_ROWS);
 
-  const rowsForTable = limitedDays.map(([dayStart, totalSeconds]) => [
-    formatDayRange(dayStart),
-    fmtDuration(Math.round(totalSeconds)),
-  ]);
+  const timeLines = limitedDays
+    .map(([dayStart, info]) => formatDayRange(info.startMs, info.endMs))
+    .join("\n");
 
-  const table = buildAsciiTable([["時間", "滞在時間"], ...rowsForTable]);
+  const durationLines = limitedDays
+    .map(([, info]) => fmtDuration(Math.round(info.totalSeconds)))
+    .join("\n");
+
+  const embed = new EmbedBuilder()
+    .setTitle("ボイスチャット滞在履歴")
+    .addFields(
+      {
+        name: "時間",
+        value: timeLines || "-",
+        inline: true,
+      },
+      {
+        name: "滞在時間",
+        value: durationLines || "-",
+        inline: true,
+      }
+    );
 
   await interaction.reply({
-    content: `\`\`\`\n${table}\n\`\`\``,
+    embeds: [embed],
     ephemeral: true,
   });
 }
 
-function formatDayRange(dayStartMs: number): string {
-  const startUtc = new Date(dayStartMs - JST_OFFSET_MS);
-  const endUtc = new Date(startUtc.getTime() + DAY_MS - 60 * 1000);
-  return `${rangeFormatter.format(startUtc)} - ${rangeFormatter.format(endUtc)}`;
-}
-
-function buildAsciiTable(rows: string[][]): string {
-  if (!rows.length) return "";
-
-  const columnWidths = rows[0].map((_, columnIndex) =>
-    Math.max(...rows.map((row) => row[columnIndex].length))
-  );
-
-  return rows
-    .map((row) =>
-      row
-        .map((cell, columnIndex) => cell.padEnd(columnWidths[columnIndex], " "))
-        .join(" | ")
-    )
-    .join("\n");
+function formatDayRange(startMsJst: number, endMsJst: number): string {
+  const startDate = new Date(startMsJst - JST_OFFSET_MS);
+  const endDate = new Date(endMsJst - JST_OFFSET_MS);
+  return `${rangeFormatter.format(startDate)} - ${rangeFormatter.format(endDate)}`;
 }
