@@ -20,8 +20,8 @@ export const WEEKLY_TOP_LIMIT = 10;
 async function fetchPeriod(): Promise<PeriodRow> {
   const { rows } = await pg.query<PeriodRow>(
     `SELECT
-        (date_trunc('week', now() AT TIME ZONE 'Asia/Tokyo') - interval '1 week') AT TIME ZONE 'UTC' AS start_utc,
-        (date_trunc('week', now() AT TIME ZONE 'Asia/Tokyo')) AT TIME ZONE 'UTC' AS end_utc`
+        (date_trunc('week', now() AT TIME ZONE 'Asia/Tokyo') - interval '1 week') AT TIME ZONE 'Asia/Tokyo' AS start_utc,
+        (date_trunc('week', now() AT TIME ZONE 'Asia/Tokyo')) AT TIME ZONE 'Asia/Tokyo' AS end_utc`
   );
 
   if (!rows.length) {
