@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.2.3](https://github.com/piyoraik/discord-notify/compare/v1.2.2...v1.2.3) (2025-10-06)
+
+
+### Bug Fixes
+
+* historyコマンドの表示形式の修正 ([d4e41e8](https://github.com/piyoraik/discord-notify/commit/d4e41e82694d04b2d563cf0af8ab28a5629d2a8d))
+
 ### [1.2.2](https://github.com/piyoraik/discord-notify/compare/v1.2.1...v1.2.2) (2025-10-06)
 
 
